@@ -1,65 +1,59 @@
-const venom = require('venom-bot')
-const venomOptions = require('./venom-options.js')
+const { Client, LocalAuth } = require('whatsapp-web.js');
+const express = require('express');
 
-const TWENTY_MINUTES = 1200000
-let client = null
+const app = express();
+const port = process.env.PORT || 3000;
 
-dateLog('Started index.js')
-initBot()
+// Express server
+app.get('/', (req, res) => {
+    res.send('WhatsApp Bot Server is running!');
+});
 
-function initBot() {
-	dateLog('Initializing bot')
-	venom
-		//	create bot with options
-		.create(venomOptions)
-		// 	start bot
-		.then((client) => startBot(client))
-		// 	catch errors
-		.catch((err) => {
-			dateLog(err)
-		})
-}
+app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+});
 
-function startBot(_client) {
-	dateLog('Starting bot')
-	client = _client
+// WhatsApp Client
+const client = new Client({
+    authStrategy: new LocalAuth(),
+    puppeteer: {
+        headless: false,
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--disable-gpu'
+        ]
+    }
+});
 
-	//	restart bot every 20 minutos
-	//	stops working otherwise
-	setTimeout(() => {
-		//	close bot
-		client.close()
-		dateLog('Closing bot')
+client.on('qr', (qr) => {
+    console.log('QR RECEIVED', qr);
+});
 
-		//	init bot again
-		initBot()
-	}, TWENTY_MINUTES)
+client.on('ready', () => {
+    console.log('Client is ready!');
+});
 
-	//
-	// add your code here
-	//
+client.on('message', msg => {
+    if (msg.body == '!ping') {
+        msg.reply('pong');
+    }
+});
 
-	// example: reply every message with "Hi!""
-	client.onMessage(reply)
-}
+// Initialize
+console.log('Initializing...');
+client.initialize()
+    .catch(err => {
+        console.error('Initialization error:', err);
+    });
 
-function reply(message) {
-	const sender = message.from
-	dateLog(`Message received from: ${sender}`)
-	const replyText = 'Hi!'
-	client.sendText(sender, replyText)
-	dateLog(`Message: "${replyText}" sent to: ${sender}`)
-}
+// Error handling
+process.on('uncaughtException', err => {
+    console.error('Uncaught Exception:', err);
+});
 
-//
-//	Aux
-//
-
-// Catch ctrl+C
-process.on('SIGINT', function () {
-	client.close()
-})
-
-function dateLog(text) {
-	console.log(new Date(), ' - ', text)
-}
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled rejection at:', promise, 'reason:', reason);
+});
