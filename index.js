@@ -134,13 +134,14 @@ client.on('ready', () => {
     console.log('Client is ready!');
 });
 
+// Alteração: Envio de mensagens para o Webhook configurado
 client.on('message', async msg => {
     // Responde ao comando !ping
     if (msg.body === '!ping') {
         msg.reply('pong');
     }
 
-    // Envia mensagem para webhook se configurado
+    // Envia mensagem para o Webhook se configurado
     if (webhookUrl) {
         try {
             const response = await fetch(webhookUrl, {
@@ -148,13 +149,13 @@ client.on('message', async msg => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     from: msg.from,
-                    body: msg.body,
+                    body: msg.body, // Conteúdo da mensagem
                     timestamp: msg.timestamp,
                     type: msg.type,
                     hasMedia: msg.hasMedia
                 })
             });
-            console.log('Webhook enviado:', response.status);
+            console.log('Webhook enviado com status:', response.status);
         } catch (error) {
             console.error('Erro ao enviar webhook:', error);
         }
