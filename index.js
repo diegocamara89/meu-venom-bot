@@ -3,7 +3,6 @@ const express = require('express');
 const qrcode = require('qrcode-terminal');
 const path = require('path');
 const fs = require('fs').promises;
-const puppeteer = require('puppeteer-core');
 
 const whitelistController = require('./src/controllers/whitelistController');
 const webhookController = require('./src/controllers/webhookController');
@@ -25,7 +24,7 @@ app.use('/api/backup', backupRoutes);
 // QR Code data
 let qrCodeData = '';
 
-// WhatsApp Client usando Puppeteer-core
+// WhatsApp Client com configuração melhorada
 const client = new Client({
     authStrategy: new LocalAuth({
         clientId: "bot-whatsapp",
@@ -33,7 +32,7 @@ const client = new Client({
     }),
     puppeteer: {
         headless: true,
-        executablePath: '/usr/bin/google-chrome-stable',
+        executablePath: '/usr/bin/chromium-browser',
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -46,6 +45,10 @@ const client = new Client({
             '--deterministic-fetch',
             '--disable-features=IsolateOrigins',
             '--disable-site-isolation-trials'
+            '--disable-site-isolation-trials',
+            '--disable-infobars',
+            '--window-size=1920,1080',
+            '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
         ]
     },
     restartOnAuthFail: true,
