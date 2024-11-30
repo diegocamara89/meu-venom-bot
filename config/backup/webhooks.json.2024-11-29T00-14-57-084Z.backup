@@ -1,0 +1,10 @@
+{
+  "webhooks": [
+    {
+      "id": "1732839186720",
+      "url": "http://localhost:3001/webhook",
+      "description": "Webhook de teste",
+      "createdAt": "2024-11-29T00:13:06.720Z"
+    }
+  ]
+}

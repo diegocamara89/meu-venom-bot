@@ -1,0 +1,11 @@
+2024/11/29-22:02:47.952 1736 Reusing MANIFEST /mnt/c/Users/marce/OneDrive/Área de Trabalho/meu-venom-bot/.wwebjs_auth/session-bot-whatsapp/Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2024/11/29-22:02:47.982 1736 Recovering log #14
+2024/11/29-22:02:48.070 1736 Reusing old log /mnt/c/Users/marce/OneDrive/Área de Trabalho/meu-venom-bot/.wwebjs_auth/session-bot-whatsapp/Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb/000014.log 
+2024/11/29-22:02:49.336 1737 Level-0 table #19: started
+2024/11/29-22:02:50.255 1737 Level-0 table #19: 634773 bytes OK
+2024/11/29-22:02:50.269 1737 Delete type=0 #14
+2024/11/29-22:02:50.272 1735 Manual compaction at level-0 from '\x00\x1c\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x1d\x00\x00\x00' @ 0 : 0; will stop at (end)
+2024/11/29-22:02:50.326 1737 Compacting 1@1 + 1@2 files
+2024/11/29-22:02:51.577 1737 Generated table #20@1: 32784 keys, 1380314 bytes
+2024/11/29-22:02:51.577 1737 Compacted 1@1 + 1@2 files => 1380314 bytes
+2024/11/29-22:02:51.579 1737 compacted to: files[ 0 0 1 0 0 0 0 ]

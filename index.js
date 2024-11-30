@@ -1,28 +1,60 @@
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const express = require('express');
 const qrcode = require('qrcode-terminal');
-const fetch = require('node-fetch');
+const path = require('path');
+const fs = require('fs').promises;
+
+const whitelistController = require('./src/controllers/whitelistController');
+const webhookController = require('./src/controllers/webhookController');
+const apiRoutes = require('./src/routes/api');
+const backupRoutes = require('./src/routes/backup');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(express.static('public'));
 
+// API Routes
+app.use('/api', apiRoutes);
+app.use('/api/backup', backupRoutes);
+
+// QR Code data
 let qrCodeData = '';
-let webhookUrl = '';
 
-// Express server
-app.get('/', (req, res) => {
-    res.send('WhatsApp Bot Server is running!');
+// WhatsApp Client com configuração melhorada
+const client = new Client({
+    authStrategy: new LocalAuth({
+        clientId: "bot-whatsapp",
+        dataPath: path.join(process.cwd(), '.wwebjs_auth')
+    }),
+    puppeteer: {
+        headless: true,
+        executablePath: '/usr/bin/chromium-browser',
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--disable-gpu',
+            '--disable-extensions',
+            '--no-first-run',
+            '--no-zygote',
+            '--deterministic-fetch',
+            '--disable-features=IsolateOrigins',
+            '--disable-site-isolation-trials'
+        ]
+    },
+    restartOnAuthFail: true,
+    takeoverOnConflict: true,
+    takeoverTimeoutMs: 10000
 });
 
-// Status endpoint
-app.get('/status', (req, res) => {
-    res.json({
-        status: client.info ? 'CONNECTED' : 'DISCONNECTED',
-        info: client.info || {}
-    });
+// Endpoint principal
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // QR Code endpoint
@@ -34,19 +66,17 @@ app.get('/qr', (req, res) => {
     }
 });
 
-// Webhook configuration endpoint
-app.post('/webhook', (req, res) => {
-    webhookUrl = req.body.url;
-    res.json({ success: true, webhook: webhookUrl });
-});
-
-// Send message endpoint
+// Send message endpoint completo com novos tipos de mídia
 app.post('/send', async (req, res) => {
     try {
         const { number, message, type, latitude, longitude } = req.body;
         
         if (!number) {
             return res.status(400).json({ error: 'Número é obrigatório' });
+        }
+
+        if (!whitelistController.isWhitelisted(number)) {
+            return res.status(403).json({ error: 'Número não autorizado' });
         }
 
         const chatId = number + "@c.us";
@@ -65,8 +95,89 @@ app.post('/send', async (req, res) => {
                 if (!message) {
                     return res.status(400).json({ error: 'URL da imagem é obrigatória' });
                 }
-                const media = await MessageMedia.fromUrl(message);
-                await client.sendMessage(chatId, media);
+                try {
+                    const media = await MessageMedia.fromUrl(message, {
+                        unsafeMime: true,
+                        reqOptions: {
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
+                            }
+                        }
+                    });
+                    await client.sendMessage(chatId, media, {
+                        caption: 'Imagem enviada via bot'
+                    });
+                } catch (imageError) {
+                    console.error('Erro ao processar imagem:', imageError);
+                    return res.status(500).json({ error: 'Erro ao processar imagem: ' + imageError.message });
+                }
+                break;
+
+            case 'document':
+                if (!message) {
+                    return res.status(400).json({ error: 'URL do documento é obrigatória' });
+                }
+                try {
+                    const media = await MessageMedia.fromUrl(message, {
+                        unsafeMime: true,
+                        reqOptions: {
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
+                            }
+                        }
+                    });
+                    await client.sendMessage(chatId, media, {
+                        caption: 'Documento enviado via bot',
+                        sendMediaAsDocument: true
+                    });
+                } catch (docError) {
+                    console.error('Erro ao processar documento:', docError);
+                    return res.status(500).json({ error: 'Erro ao processar documento: ' + docError.message });
+                }
+                break;
+
+            case 'audio':
+                if (!message) {
+                    return res.status(400).json({ error: 'URL do áudio é obrigatória' });
+                }
+                try {
+                    const media = await MessageMedia.fromUrl(message, {
+                        unsafeMime: true,
+                        reqOptions: {
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
+                            }
+                        }
+                    });
+                    await client.sendMessage(chatId, media, {
+                        sendAudioAsVoice: true
+                    });
+                } catch (audioError) {
+                    console.error('Erro ao processar áudio:', audioError);
+                    return res.status(500).json({ error: 'Erro ao processar áudio: ' + audioError.message });
+                }
+                break;
+
+            case 'video':
+                if (!message) {
+                    return res.status(400).json({ error: 'URL do vídeo é obrigatória' });
+                }
+                try {
+                    const media = await MessageMedia.fromUrl(message, {
+                        unsafeMime: true,
+                        reqOptions: {
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
+                            }
+                        }
+                    });
+                    await client.sendMessage(chatId, media, {
+                        caption: 'Vídeo enviado via bot'
+                    });
+                } catch (videoError) {
+                    console.error('Erro ao processar vídeo:', videoError);
+                    return res.status(500).json({ error: 'Erro ao processar vídeo: ' + videoError.message });
+                }
                 break;
 
             case 'text':
@@ -84,96 +195,115 @@ app.post('/send', async (req, res) => {
     }
 });
 
-// Legacy GET endpoint for backward compatibility
-app.get('/send', async (req, res) => {
-    try {
-        const number = req.query.number;
-        const message = req.query.message;
-
-        if (!number || !message) {
-            return res.status(400).send('Número e mensagem são obrigatórios');
-        }
-
-        const chatId = number + "@c.us";
-        console.log('Enviando mensagem para:', chatId);
-        
-        await client.sendMessage(chatId, message);
-        res.send('Mensagem enviada com sucesso!');
-    } catch (error) {
-        console.error('Erro ao enviar mensagem:', error);
-        res.status(500).send('Erro ao enviar mensagem: ' + error);
-    }
-});
-
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-});
-
-// WhatsApp Client
-const client = new Client({
-    authStrategy: new LocalAuth({clientId: Date.now().toString()}),
-    puppeteer: {
-        headless: true,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--disable-gpu'
-        ]
-    }
-});
-
+// Tratamento de eventos do WhatsApp
 client.on('qr', (qr) => {
     qrCodeData = qr;
-    console.log('QR Code:');
+    console.log('Novo QR Code gerado. Por favor, escaneie:');
     qrcode.generate(qr, {small: true});
 });
 
 client.on('ready', () => {
-    console.log('Client is ready!');
+    console.log('Cliente WhatsApp conectado e pronto!');
+    qrCodeData = '';
 });
 
-// Alteração: Envio de mensagens para o Webhook configurado
-client.on('message', async msg => {
-    // Responde ao comando !ping
-    if (msg.body === '!ping') {
-        msg.reply('pong');
-    }
-
-    // Envia mensagem para o Webhook se configurado
-    if (webhookUrl) {
-        try {
-            const response = await fetch(webhookUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    from: msg.from,
-                    body: msg.body, // Conteúdo da mensagem
-                    timestamp: msg.timestamp,
-                    type: msg.type,
-                    hasMedia: msg.hasMedia
-                })
-            });
-            console.log('Webhook enviado com status:', response.status);
-        } catch (error) {
-            console.error('Erro ao enviar webhook:', error);
-        }
-    }
+client.on('authenticated', (session) => {
+    console.log('Cliente autenticado com sucesso!');
 });
 
-// Initialize
-console.log('Initializing...');
-client.initialize()
-    .catch(err => {
-        console.error('Initialization error:', err);
+client.on('auth_failure', (error) => {
+    console.error('Erro de autenticação:', error);
+});
+
+client.on('disconnected', (reason) => {
+    console.log('Cliente desconectado:', reason);
+    client.initialize().catch(err => {
+        console.error('Erro ao reconectar:', err);
     });
+});
+
+// Tratamento de mensagens recebidas com suporte a mídia
+client.on('message', async msg => {
+    try {
+        const sender = msg.from.split('@')[0];
+        if (!whitelistController.isWhitelisted(sender)) {
+            console.log(`Mensagem ignorada de número não autorizado: ${sender}`);
+            return;
+        }
+
+        // Comandos básicos
+        if (msg.body === '!ping') {
+            msg.reply('pong');
+        }
+
+        // Preparar dados da mensagem
+        const messageData = {
+            from: msg.from,
+            body: msg.body,
+            timestamp: msg.timestamp,
+            type: msg.type,
+            hasMedia: msg.hasMedia
+        };
+
+        // Processamento de mídia recebida
+        if (msg.hasMedia) {
+            const media = await msg.downloadMedia();
+            messageData.media = {
+                mimetype: media.mimetype,
+                filename: media.filename,
+                data: media.data
+            };
+
+            // Criar diretório de mídia se não existir
+            const mediaDir = path.join(__dirname, 'media');
+            await fs.mkdir(mediaDir, { recursive: true });
+
+            // Salvar mídia recebida
+            if (media.filename) {
+                const filePath = path.join(mediaDir, `${Date.now()}-${media.filename}`);
+                await fs.writeFile(filePath, Buffer.from(media.data, 'base64'));
+                messageData.media.savedPath = filePath;
+            }
+        }
+
+        // Enviar para webhooks
+        await webhookController.broadcastMessage(messageData);
+
+    } catch (error) {
+        console.error('Erro ao processar mensagem:', error);
+    }
+});
 
 // Error handling
 process.on('uncaughtException', err => {
-    console.error('Uncaught Exception:', err);
+    console.error('Exceção não tratada:', err);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled rejection at:', promise, 'reason:', reason);
+    console.error('Rejeição não tratada em:', promise, 'motivo:', reason);
+});
+
+// Inicialização
+async function initialize() {
+    try {
+        await fs.mkdir('.wwebjs_auth', { recursive: true });
+        await fs.mkdir(path.join(__dirname, 'media'), { recursive: true });
+        
+        app.listen(port, () => {
+            console.log(`Servidor rodando na porta ${port}`);
+        });
+
+        await client.initialize();
+        
+        console.log('Sistema inicializado com sucesso!');
+    } catch (error) {
+        console.error('Erro na inicialização:', error);
+        process.exit(1);
+    }
+}
+
+console.log('Iniciando servidor e cliente WhatsApp...');
+initialize().catch(err => {
+    console.error('Erro fatal na inicialização:', err);
+    process.exit(1);
 });

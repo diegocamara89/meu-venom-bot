@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Bot Control Panel</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>WhatsApp Bot Control Panel</h1>
+
+        <!-- Status Card -->
+        <div class="card" id="statusCard">
+            <h2>Status</h2>
+            <div id="statusContent" class="status-content">
+                Carregando...
+            </div>
+        </div>
+
+        <!-- QR Code Card -->
+        <div class="card" id="qrCard">
+            <h2>QR Code</h2>
+            <div id="qrcode"></div>
+        </div>
+
+        <!-- Whitelist Card -->
+        <div class="card">
+            <h2>Gerenciar Whitelist</h2>
+            <div class="form-group">
+                <input type="text" id="newNumber" placeholder="Digite o número (ex: 5511999999999)">
+                <button onclick="addToWhitelist()">Adicionar Número</button>
+            </div>
+            <div class="whitelist-list" id="whitelistContent">
+                Carregando...
+            </div>
+        </div>
+
+        <!-- Webhooks Card -->
+        <div class="card">
+            <h2>Gerenciar Webhooks</h2>
+            <div class="form-group">
+                <input type="text" id="webhookUrl" placeholder="URL do Webhook">
+                <input type="text" id="webhookDescription" placeholder="Descrição (opcional)">
+                <button onclick="addWebhook()">Adicionar Webhook</button>
+            </div>
+            <div class="webhook-list" id="webhookContent">
+                Carregando...
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+</body>
+</html>
