@@ -33,7 +33,7 @@ const client = new Client({
     }),
     puppeteer: {
         headless: true,
-        product: 'chrome',
+        executablePath: '/usr/bin/google-chrome-stable',
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
